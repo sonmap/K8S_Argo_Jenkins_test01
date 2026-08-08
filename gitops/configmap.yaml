@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-status
+  namespace: cicd-demo
+data:
+  status.html: |
+    <!DOCTYPE html>
+    <html lang="ko">
+    <head><meta charset="UTF-8"><title>GitOps Status</title></head>
+    <body>
+      <h1>GitOps Smoke Test</h1>
+      <p>Last Jenkins update: bootstrap</p>
+      <p>If this text changes after a Jenkins commit, Jenkins → GitHub → Argo CD sync is working.</p>
+    </body>
+    </html>
