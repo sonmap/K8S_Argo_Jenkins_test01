@@ -1,0 +1,70 @@
+pipeline {
+  agent any
+
+  options {
+    timestamps()
+    disableConcurrentBuilds()
+  }
+
+  environment {
+    REPO = 'sonmap/K8S_Argo_Jenkins_test01'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage('Skip GitOps Generated Commit') {
+      steps {
+        script {
+          def msg = sh(returnStdout: true, script: 'git log -1 --pretty=%B').trim()
+          if (msg.contains('[gitops]')) {
+            echo 'GitOps-generated commit detected. No new CI run is required.'
+            env.SKIP_PIPELINE = 'true'
+          } else {
+            env.SKIP_PIPELINE = 'false'
+          }
+        }
+      }
+    }
+
+    stage('Update GitOps Smoke Page') {
+      when {
+        expression { env.SKIP_PIPELINE != 'true' }
+      }
+      steps {
+        sh '''
+          sed -i "s/Last Jenkins update: .*/Last Jenkins update: build-${BUILD_NUMBER}<\\/p>/" gitops/configmap.yaml
+          grep "Last Jenkins update" gitops/configmap.yaml
+        '''
+      }
+    }
+
+    stage('Commit GitOps Change') {
+      when {
+        expression { env.SKIP_PIPELINE != 'true' }
+      }
+      steps {
+        withCredentials([string(credentialsId: 'github-pat', variable: 'GITHUB_TOKEN')]) {
+          sh '''
+            git config user.name "jenkins-bot"
+            git config user.email "jenkins@local.lab"
+            git add gitops/configmap.yaml
+            git commit -m "[gitops] smoke build ${BUILD_NUMBER}" || true
+            git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO}.git
+            git push origin HEAD:main
+          '''
+        }
+      }
+    }
+  }
+
+  post {
+    success {
+      echo 'Smoke pipeline completed. Check Argo CD Sync/Healthy and /status.html.'
+    }
+  }
+}
