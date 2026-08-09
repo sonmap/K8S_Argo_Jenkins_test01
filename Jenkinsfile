@@ -24,6 +24,8 @@ spec:
     env:
     - name: DOCKER_TLS_CERTDIR
       value: ""
+    args:
+    - --insecure-registry=192.168.142.1:5000
 '''
     }
   }
@@ -80,10 +82,32 @@ spec:
       steps {
         container('docker') {
           sh '''
-            docker version
-            curl -fsS http://${REGISTRY}/v2/ >/dev/null || true
-            echo "Docker and Local Registry test completed"
-          '''
+            echo "=================================="
+            echo "Waiting for Docker daemon"
+            echo "=================================="
+
+            COUNT=0
+
+            until docker info >/dev/null 2>&1
+            do
+              COUNT=$((COUNT+1))
+
+              if [ "$COUNT" -ge 30 ]; then
+                echo "ERROR: Docker daemon startup timeout"
+                exit 1
+              fi
+
+              echo "Waiting Docker daemon... ${COUNT}/30"
+              sleep 2
+           done
+
+           echo "=================================="
+           echo "Docker daemon READY"
+           echo "=================================="
+
+           docker version
+           docker info
+         '''
         }
       }
     }
