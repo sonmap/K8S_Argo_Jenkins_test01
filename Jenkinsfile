@@ -6,23 +6,24 @@ apiVersion: v1
 kind: Pod
 metadata:
   labels:
-    app: jenkins-agent-docker
+    app: jenkins-agent-dind
 spec:
-  securityContext:
-    runAsUser: 0
   containers:
   - name: docker
     image: docker:cli
     command:
     - cat
     tty: true
-    volumeMounts:
-    - name: docker-sock
-      mountPath: /var/run/docker.sock
-  volumes:
-  - name: docker-sock
-    hostPath:
-      path: /var/run/docker.sock
+    env:
+    - name: DOCKER_HOST
+      value: tcp://localhost:2375
+  - name: dind
+    image: docker:dind
+    securityContext:
+      privileged: true
+    env:
+    - name: DOCKER_TLS_CERTDIR
+      value: ""
 '''
     }
   }
