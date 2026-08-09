@@ -36,7 +36,8 @@ spec:
 
   environment {
     REGISTRY = '192.168.142.101:30500'
-    IMAGE_NAME = 'jenkins-argo-demo'
+    FRONTEND_IMAGE = 'jenkins-argo-demo'
+    BACKEND_IMAGE = 'jenkins-argo-backend'
     REPO = 'sonmap/K8S_Argo_Jenkins_test01'
   }
 
@@ -61,7 +62,7 @@ spec:
       }
     }
 
-    stage('Test') {
+    stage('Test Source') {
       when {
         expression { env.SKIP_PIPELINE != 'true' }
       }
@@ -69,8 +70,14 @@ spec:
         sh '''
           test -f app/Dockerfile
           test -f app/index.html
+          test -f app/frontend.html
+          test -f app/nginx.conf
+          test -f backend/Dockerfile
+          test -f backend/pom.xml
+          test -f backend/src/main/java/com/example/demo/CustomerController.java
           grep -q "Jenkins + Argo CD" app/index.html
-          echo "Basic source test passed"
+          grep -q "/api/customers" app/frontend.html
+          echo "Frontend + Backend source test passed"
         '''
       }
     }
@@ -82,32 +89,20 @@ spec:
       steps {
         container('docker') {
           sh '''
-            echo "=================================="
             echo "Waiting for Docker daemon"
-            echo "=================================="
-
             COUNT=0
-
             until docker info >/dev/null 2>&1
             do
               COUNT=$((COUNT+1))
-
               if [ "$COUNT" -ge 30 ]; then
                 echo "ERROR: Docker daemon startup timeout"
                 exit 1
               fi
-
               echo "Waiting Docker daemon... ${COUNT}/30"
               sleep 2
-           done
-
-           echo "=================================="
-           echo "Docker daemon READY"
-           echo "=================================="
-
-           docker version
-           docker info
-         '''
+            done
+            docker version
+          '''
         }
       }
     }
@@ -122,9 +117,15 @@ spec:
         }
         container('docker') {
           sh '''
+            echo "Build Frontend: ${REGISTRY}/${FRONTEND_IMAGE}:${IMAGE_TAG}"
             docker build \
-              -t ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \
+              -t ${REGISTRY}/${FRONTEND_IMAGE}:${IMAGE_TAG} \
               ./app
+
+            echo "Build Backend: ${REGISTRY}/${BACKEND_IMAGE}:${IMAGE_TAG}"
+            docker build \
+              -t ${REGISTRY}/${BACKEND_IMAGE}:${IMAGE_TAG} \
+              ./backend
           '''
         }
       }
@@ -137,21 +138,27 @@ spec:
       steps {
         container('docker') {
           sh '''
-            docker push ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
-            curl -fsS http://${REGISTRY}/v2/${IMAGE_NAME}/tags/list || true
+            docker push ${REGISTRY}/${FRONTEND_IMAGE}:${IMAGE_TAG}
+            docker push ${REGISTRY}/${BACKEND_IMAGE}:${IMAGE_TAG}
+
+            echo "Frontend tags:"
+            curl -fsS http://${REGISTRY}/v2/${FRONTEND_IMAGE}/tags/list || true
+            echo ""
+            echo "Backend tags:"
+            curl -fsS http://${REGISTRY}/v2/${BACKEND_IMAGE}/tags/list || true
           '''
         }
       }
     }
 
-    stage('Update GitOps Image Tag') {
+    stage('Update GitOps Image Tags') {
       when {
         expression { env.SKIP_PIPELINE != 'true' }
       }
       steps {
         sh '''
-          sed -i "s#newName: .*#newName: ${REGISTRY}/${IMAGE_NAME}#" gitops/kustomization.yaml
-          sed -i "s#newTag: .*#newTag: ${IMAGE_TAG}#" gitops/kustomization.yaml
+          sed -i "/- name: jenkins-argo-demo/{n;s#newName: .*#newName: ${REGISTRY}/${FRONTEND_IMAGE}#;n;s#newTag: .*#newTag: ${IMAGE_TAG}#}" gitops/kustomization.yaml
+          sed -i "/- name: jenkins-argo-backend/{n;s#newName: .*#newName: ${REGISTRY}/${BACKEND_IMAGE}#;n;s#newTag: .*#newTag: ${IMAGE_TAG}#}" gitops/kustomization.yaml
           cat gitops/kustomization.yaml
         '''
       }
@@ -167,7 +174,7 @@ spec:
             git config user.name "jenkins-bot"
             git config user.email "jenkins@local.lab"
             git add gitops/kustomization.yaml
-            git commit -m "[gitops] deploy ${IMAGE_NAME}:${IMAGE_TAG}" || true
+            git commit -m "[gitops] deploy frontend/backend ${IMAGE_TAG}" || true
             git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO}.git
             git push origin HEAD:main
           '''
@@ -178,10 +185,10 @@ spec:
 
   post {
     success {
-      echo "CI completed. Argo CD should deploy ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}."
+      echo "CI completed. Argo CD should deploy frontend/backend ${IMAGE_TAG} and MySQL demo resources."
     }
     failure {
-      echo 'Pipeline failed. Check Docker access, Registry connectivity, and github-pat credential.'
+      echo 'Pipeline failed. Check Docker, Maven dependency download, Registry connectivity, and github-pat credential.'
     }
   }
 }
