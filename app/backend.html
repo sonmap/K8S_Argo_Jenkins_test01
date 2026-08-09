@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Backend Admin Demo</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, "Noto Sans KR", sans-serif; background: #0f172a; color: #e5e7eb; }
+    header { background: #111827; padding: 18px 28px; border-bottom: 1px solid #334155; }
+    header .inner, main { max-width: 1100px; margin: 0 auto; }
+    nav a { color: #cbd5e1; margin-right: 18px; text-decoration: none; font-weight: 600; }
+    main { padding: 32px 20px; }
+    h1 { margin-top: 0; color: #93c5fd; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 22px; }
+    .status { display: inline-block; padding: 5px 10px; border-radius: 999px; background: #14532d; color: #bbf7d0; font-size: 13px; }
+    .warn { background: #78350f; color: #fde68a; }
+    table { width: 100%; border-collapse: collapse; margin-top: 24px; background: #1e293b; }
+    th, td { border: 1px solid #334155; padding: 12px; text-align: left; }
+    th { background: #172033; }
+    code { color: #bfdbfe; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="inner">
+      <strong>K8S Demo Admin</strong>
+      <nav style="margin-top:10px">
+        <a href="/">메인</a>
+        <a href="/frontend.html">Frontend</a>
+        <a href="/backend.html">Backend/Admin</a>
+      </nav>
+    </div>
+  </header>
+  <main>
+    <h1>Backend / Admin 운영 화면</h1>
+    <p>실제 운영 시스템의 관리자 화면을 단순화한 예제입니다.</p>
+
+    <section class="grid">
+      <div class="card">
+        <h3>Frontend Service</h3>
+        <span class="status">RUNNING</span>
+        <p><code>demo-web:80</code></p>
+      </div>
+      <div class="card">
+        <h3>Backend API</h3>
+        <span class="status warn">DEMO</span>
+        <p>다음 단계에서 Spring Boot API Pod 연결 가능</p>
+      </div>
+      <div class="card">
+        <h3>GitOps CD</h3>
+        <span class="status">ARGO CD</span>
+        <p>Git 변경을 Kubernetes 상태와 동기화</p>
+      </div>
+      <div class="card">
+        <h3>Container Registry</h3>
+        <span class="status">LOCAL</span>
+        <p><code>192.168.142.101:30500</code></p>
+      </div>
+    </section>
+
+    <table>
+      <thead>
+        <tr><th>구성요소</th><th>역할</th><th>상태 예제</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Jenkins</td><td>CI / Docker Build / Image Push</td><td>SUCCESS</td></tr>
+        <tr><td>Argo CD</td><td>GitOps CD / Kubernetes Sync</td><td>Synced / Healthy</td></tr>
+        <tr><td>Kubernetes</td><td>Deployment / ReplicaSet / Pod 실행</td><td>Running</td></tr>
+        <tr><td>MetalLB</td><td>LoadBalancer IP 제공</td><td>192.168.142.201</td></tr>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>
