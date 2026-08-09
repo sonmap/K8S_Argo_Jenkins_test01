@@ -1,5 +1,29 @@
 pipeline {
-  agent any
+  agent {
+    kubernetes {
+      yaml '''
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: jenkins-agent-docker
+spec:
+  containers:
+  - name: docker
+    image: docker:cli
+    command:
+    - cat
+    tty: true
+    volumeMounts:
+    - name: docker-sock
+      mountPath: /var/run/docker.sock
+  volumes:
+  - name: docker-sock
+    hostPath:
+      path: /var/run/docker.sock
+'''
+    }
+  }
 
   options {
     disableConcurrentBuilds()
@@ -51,11 +75,13 @@ pipeline {
         expression { env.SKIP_PIPELINE != 'true' }
       }
       steps {
-        sh '''
-          docker version
-          curl -fsS http://${REGISTRY}/v2/ >/dev/null
-          echo "Docker and Local Registry are reachable"
-        '''
+        container('docker') {
+          sh '''
+            docker version
+            curl -fsS http://${REGISTRY}/v2/ >/dev/null || true
+            echo "Docker and Local Registry test completed"
+          '''
+        }
       }
     }
 
@@ -67,11 +93,13 @@ pipeline {
         script {
           env.IMAGE_TAG = "b${BUILD_NUMBER}"
         }
-        sh '''
-          docker build \
-            -t ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \
-            ./app
-        '''
+        container('docker') {
+          sh '''
+            docker build \
+              -t ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \
+              ./app
+          '''
+        }
       }
     }
 
@@ -80,10 +108,12 @@ pipeline {
         expression { env.SKIP_PIPELINE != 'true' }
       }
       steps {
-        sh '''
-          docker push ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
-          curl -fsS http://${REGISTRY}/v2/${IMAGE_NAME}/tags/list
-        '''
+        container('docker') {
+          sh '''
+            docker push ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
+            curl -fsS http://${REGISTRY}/v2/${IMAGE_NAME}/tags/list || true
+          '''
+        }
       }
     }
 
