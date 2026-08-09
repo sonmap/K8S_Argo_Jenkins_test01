@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Frontend Demo</title>
+  <title>Frontend + MySQL Query Demo</title>
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; font-family: Arial, "Noto Sans KR", sans-serif; background: #f4f7fb; color: #172033; }
@@ -11,14 +11,24 @@
     header .inner, main { max-width: 1100px; margin: 0 auto; }
     nav a { color: white; margin-right: 18px; text-decoration: none; font-weight: 600; }
     main { padding: 32px 20px; }
-    .hero { background: white; border-radius: 16px; padding: 32px; margin-bottom: 24px; border: 1px solid #dbe4ef; }
-    .hero h1 { margin-top: 0; color: #326ce5; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; }
+    .hero, .panel { background: white; border-radius: 16px; padding: 28px; margin-bottom: 24px; border: 1px solid #dbe4ef; }
+    .hero h1, .panel h2 { margin-top: 0; color: #326ce5; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; margin-bottom: 24px; }
     .card { background: white; border: 1px solid #dbe4ef; border-radius: 14px; padding: 22px; }
     .card h3 { margin-top: 0; }
     .price { font-size: 28px; font-weight: 700; color: #326ce5; }
-    .btn { display: inline-block; margin-top: 14px; padding: 10px 16px; border-radius: 8px; background: #326ce5; color: white; text-decoration: none; }
     .muted { color: #667085; }
+    .flow { padding: 14px; border-radius: 9px; background: #eef4ff; font-family: monospace; margin: 18px 0; }
+    .search { display: flex; gap: 10px; flex-wrap: wrap; margin: 18px 0; }
+    input { flex: 1; min-width: 220px; padding: 11px 13px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 15px; }
+    button { padding: 11px 18px; border: 0; border-radius: 8px; background: #326ce5; color: white; font-weight: 700; cursor: pointer; }
+    button.secondary { background: #475569; }
+    table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+    th, td { border-bottom: 1px solid #e2e8f0; padding: 11px; text-align: left; }
+    th { background: #f8fafc; }
+    .status { padding: 10px 12px; border-radius: 8px; background: #f1f5f9; color: #475569; }
+    .ok { background: #ecfdf3; color: #067647; }
+    .error { background: #fef3f2; color: #b42318; }
   </style>
 </head>
 <body>
@@ -27,38 +37,94 @@
       <strong>K8S Demo Shop</strong>
       <nav style="margin-top:10px">
         <a href="/">메인</a>
-        <a href="/frontend.html">Frontend</a>
+        <a href="/frontend.html">Frontend / DB조회</a>
         <a href="/backend.html">Backend/Admin</a>
       </nav>
     </div>
   </header>
+
   <main>
     <section class="hero">
-      <h1>Frontend 사용자 화면</h1>
-      <p>이 화면은 실제 서비스의 사용자용 웹 화면을 단순화한 예제입니다.</p>
-      <p class="muted">HTML / CSS / JavaScript 파일은 Docker Image 안에 포함되어 Nginx에서 서비스됩니다.</p>
+      <h1>Frontend + MySQL 고객 조회</h1>
+      <p>웹 브라우저에서 고객명을 조회하면 Nginx가 요청을 Spring Boot Backend로 전달하고 Backend가 MySQL을 조회합니다.</p>
+      <div class="flow">Browser → demo-web(Nginx) → /api → demo-backend(Spring Boot) → demo-mysql(MySQL)</div>
+      <p class="muted">Frontend와 Backend는 서로 다른 Kubernetes Service이며, MySQL은 ClusterIP로 내부에서만 접근합니다.</p>
     </section>
 
     <section class="grid">
-      <div class="card">
-        <h3>Starter</h3>
-        <div class="price">₩9,900</div>
-        <p>개인 사용자용 기본 상품</p>
-        <a class="btn" href="#">신청하기</a>
+      <div class="card"><h3>Starter</h3><div class="price">₩9,900</div><p>개인 사용자용 기본 상품</p></div>
+      <div class="card"><h3>Business</h3><div class="price">₩39,000</div><p>중소기업용 서비스 패키지</p></div>
+      <div class="card"><h3>Enterprise</h3><div class="price">문의</div><p>대규모 기업용 고가용성 구성</p></div>
+    </section>
+
+    <section class="panel">
+      <h2>MySQL 고객 조회</h2>
+      <p>이름을 비워 두고 조회하면 전체 고객을 표시합니다. 예: <strong>김</strong>, <strong>이</strong>, <strong>박</strong></p>
+      <div class="search">
+        <input id="customerName" type="text" placeholder="고객명 입력 (예: 김민수)">
+        <button id="searchBtn" type="button">조회</button>
+        <button id="allBtn" class="secondary" type="button">전체조회</button>
       </div>
-      <div class="card">
-        <h3>Business</h3>
-        <div class="price">₩39,000</div>
-        <p>중소기업용 서비스 패키지</p>
-        <a class="btn" href="#">신청하기</a>
-      </div>
-      <div class="card">
-        <h3>Enterprise</h3>
-        <div class="price">문의</div>
-        <p>대규모 기업용 고가용성 구성</p>
-        <a class="btn" href="#">상담 요청</a>
+      <div id="status" class="status">조회 버튼을 누르면 Backend API를 통해 MySQL 데이터를 조회합니다.</div>
+
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr><th>ID</th><th>이름</th><th>Email</th><th>등급</th><th>등록일</th></tr>
+          </thead>
+          <tbody id="customerRows">
+            <tr><td colspan="5" class="muted">조회 결과가 여기에 표시됩니다.</td></tr>
+          </tbody>
+        </table>
       </div>
     </section>
   </main>
+
+  <script>
+    const nameInput = document.getElementById('customerName');
+    const rows = document.getElementById('customerRows');
+    const statusBox = document.getElementById('status');
+
+    async function loadCustomers(name = '') {
+      statusBox.className = 'status';
+      statusBox.textContent = 'MySQL 데이터를 조회 중입니다...';
+      rows.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
+
+      try {
+        const url = name ? `/api/customers?name=${encodeURIComponent(name)}` : '/api/customers';
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+        rows.innerHTML = '';
+
+        if (data.length === 0) {
+          rows.innerHTML = '<tr><td colspan="5">조회 결과가 없습니다.</td></tr>';
+        } else {
+          data.forEach(customer => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${customer.id ?? ''}</td>
+              <td>${customer.name ?? ''}</td>
+              <td>${customer.email ?? ''}</td>
+              <td>${customer.grade ?? ''}</td>
+              <td>${customer.created_at ?? ''}</td>`;
+            rows.appendChild(tr);
+          });
+        }
+
+        statusBox.className = 'status ok';
+        statusBox.textContent = `조회 성공: ${data.length}건 - Spring Boot → MySQL 연결 정상`;
+      } catch (error) {
+        rows.innerHTML = '<tr><td colspan="5">Backend 또는 MySQL 연결을 확인하세요.</td></tr>';
+        statusBox.className = 'status error';
+        statusBox.textContent = `조회 실패: ${error.message}`;
+      }
+    }
+
+    document.getElementById('searchBtn').addEventListener('click', () => loadCustomers(nameInput.value.trim()));
+    document.getElementById('allBtn').addEventListener('click', () => { nameInput.value = ''; loadCustomers(''); });
+    nameInput.addEventListener('keydown', event => { if (event.key === 'Enter') loadCustomers(nameInput.value.trim()); });
+  </script>
 </body>
 </html>
