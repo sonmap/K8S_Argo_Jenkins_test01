@@ -1,0 +1,122 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: demo-mysql-secret
+  namespace: cicd-demo
+type: Opaque
+stringData:
+  root-password: rootpass
+  database: demo
+  username: demoapp
+  password: demopass
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-mysql-init
+  namespace: cicd-demo
+data:
+  01-init.sql: |
+    CREATE TABLE IF NOT EXISTS customers (
+      id BIGINT PRIMARY KEY AUTO_INCREMENT,
+      name VARCHAR(100) NOT NULL,
+      email VARCHAR(200) NOT NULL,
+      grade VARCHAR(30) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    INSERT INTO customers (name, email, grade) VALUES
+      ('김민수', 'minsu@example.com', 'GOLD'),
+      ('이서연', 'seoyeon@example.com', 'SILVER'),
+      ('박지훈', 'jihoon@example.com', 'VIP'),
+      ('최유진', 'yujin@example.com', 'GOLD'),
+      ('정하늘', 'haneul@example.com', 'SILVER');
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-mysql
+  namespace: cicd-demo
+  labels:
+    app: demo-mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo-mysql
+  template:
+    metadata:
+      labels:
+        app: demo-mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.4
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3306
+              name: mysql
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: demo-mysql-secret
+                  key: root-password
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: demo-mysql-secret
+                  key: database
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: demo-mysql-secret
+                  key: username
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: demo-mysql-secret
+                  key: password
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - mysqladmin ping -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD"
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 768Mi
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+            - name: init-sql
+              mountPath: /docker-entrypoint-initdb.d/01-init.sql
+              subPath: 01-init.sql
+              readOnly: true
+      volumes:
+        - name: mysql-data
+          emptyDir: {}
+        - name: init-sql
+          configMap:
+            name: demo-mysql-init
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-mysql
+  namespace: cicd-demo
+spec:
+  type: ClusterIP
+  selector:
+    app: demo-mysql
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: 3306
