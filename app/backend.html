@@ -14,12 +14,15 @@
     h1 { margin-top: 0; color: #93c5fd; }
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px; }
     .card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 22px; }
-    .status { display: inline-block; padding: 5px 10px; border-radius: 999px; background: #14532d; color: #bbf7d0; font-size: 13px; }
-    .warn { background: #78350f; color: #fde68a; }
+    .status { display: inline-block; padding: 5px 10px; border-radius: 999px; background: #475569; color: #e2e8f0; font-size: 13px; }
+    .ok { background: #14532d; color: #bbf7d0; }
+    .error { background: #7f1d1d; color: #fecaca; }
     table { width: 100%; border-collapse: collapse; margin-top: 24px; background: #1e293b; }
     th, td { border: 1px solid #334155; padding: 12px; text-align: left; }
     th { background: #172033; }
     code { color: #bfdbfe; }
+    button { margin-top: 14px; padding: 10px 15px; border: 0; border-radius: 8px; background: #2563eb; color: white; font-weight: 700; cursor: pointer; }
+    pre { white-space: pre-wrap; background: #020617; border-radius: 10px; padding: 14px; color: #bfdbfe; }
   </style>
 </head>
 <body>
@@ -28,49 +31,84 @@
       <strong>K8S Demo Admin</strong>
       <nav style="margin-top:10px">
         <a href="/">메인</a>
-        <a href="/frontend.html">Frontend</a>
+        <a href="/frontend.html">Frontend / DB조회</a>
         <a href="/backend.html">Backend/Admin</a>
       </nav>
     </div>
   </header>
+
   <main>
-    <h1>Backend / Admin 운영 화면</h1>
-    <p>실제 운영 시스템의 관리자 화면을 단순화한 예제입니다.</p>
+    <h1>Backend / MySQL 운영 확인</h1>
+    <p>이 화면의 상태 확인 버튼은 실제 <code>/api/health</code> REST API를 호출합니다.</p>
 
     <section class="grid">
       <div class="card">
-        <h3>Frontend Service</h3>
-        <span class="status">RUNNING</span>
+        <h3>Frontend</h3>
+        <span class="status ok">NGINX</span>
         <p><code>demo-web:80</code></p>
       </div>
       <div class="card">
         <h3>Backend API</h3>
-        <span class="status warn">DEMO</span>
-        <p>다음 단계에서 Spring Boot API Pod 연결 가능</p>
+        <span id="backendStatus" class="status">CHECK</span>
+        <p><code>demo-backend:8080</code></p>
+      </div>
+      <div class="card">
+        <h3>Database</h3>
+        <span id="dbStatus" class="status">CHECK</span>
+        <p><code>demo-mysql:3306</code></p>
       </div>
       <div class="card">
         <h3>GitOps CD</h3>
-        <span class="status">ARGO CD</span>
-        <p>Git 변경을 Kubernetes 상태와 동기화</p>
-      </div>
-      <div class="card">
-        <h3>Container Registry</h3>
-        <span class="status">LOCAL</span>
-        <p><code>192.168.142.101:30500</code></p>
+        <span class="status ok">ARGO CD</span>
+        <p>Git → Argo CD → Kubernetes</p>
       </div>
     </section>
 
+    <button id="healthBtn" type="button">Backend / MySQL 상태 확인</button>
+    <pre id="healthResult">아직 조회하지 않았습니다.</pre>
+
     <table>
-      <thead>
-        <tr><th>구성요소</th><th>역할</th><th>상태 예제</th></tr>
-      </thead>
+      <thead><tr><th>구성요소</th><th>Kubernetes 이름</th><th>역할</th></tr></thead>
       <tbody>
-        <tr><td>Jenkins</td><td>CI / Docker Build / Image Push</td><td>SUCCESS</td></tr>
-        <tr><td>Argo CD</td><td>GitOps CD / Kubernetes Sync</td><td>Synced / Healthy</td></tr>
-        <tr><td>Kubernetes</td><td>Deployment / ReplicaSet / Pod 실행</td><td>Running</td></tr>
-        <tr><td>MetalLB</td><td>LoadBalancer IP 제공</td><td>192.168.142.201</td></tr>
+        <tr><td>Nginx</td><td>Service demo-web</td><td>정적 웹 + /api Reverse Proxy</td></tr>
+        <tr><td>Spring Boot</td><td>Service demo-backend</td><td>REST API + JDBC</td></tr>
+        <tr><td>MySQL</td><td>Service demo-mysql</td><td>customers 데이터 저장</td></tr>
+        <tr><td>Argo CD</td><td>Application k8s-argo-jenkins-test01</td><td>GitOps Sync</td></tr>
       </tbody>
     </table>
   </main>
+
+  <script>
+    const backendStatus = document.getElementById('backendStatus');
+    const dbStatus = document.getElementById('dbStatus');
+    const result = document.getElementById('healthResult');
+
+    async function checkHealth() {
+      backendStatus.className = 'status';
+      dbStatus.className = 'status';
+      backendStatus.textContent = 'CHECKING';
+      dbStatus.textContent = 'CHECKING';
+      result.textContent = 'Backend API 호출 중...';
+
+      try {
+        const response = await fetch('/api/health');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        backendStatus.className = 'status ok';
+        dbStatus.className = 'status ok';
+        backendStatus.textContent = data.status || 'UP';
+        dbStatus.textContent = data.database || 'MYSQL UP';
+        result.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        backendStatus.className = 'status error';
+        dbStatus.className = 'status error';
+        backendStatus.textContent = 'DOWN';
+        dbStatus.textContent = 'CHECK';
+        result.textContent = `연결 실패: ${error.message}`;
+      }
+    }
+
+    document.getElementById('healthBtn').addEventListener('click', checkHealth);
+  </script>
 </body>
 </html>
