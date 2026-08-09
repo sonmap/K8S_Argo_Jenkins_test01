@@ -12,7 +12,7 @@ resources:
 images:
   - name: jenkins-argo-demo
     newName: 192.168.142.101:30500/jenkins-argo-demo
-    newTag: b11
+    newTag: b12
   - name: jenkins-argo-backend
     newName: 192.168.142.101:30500/jenkins-argo-backend
-    newTag: b11
+    newTag: b12
