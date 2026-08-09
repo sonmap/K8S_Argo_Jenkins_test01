@@ -25,7 +25,7 @@ spec:
     - name: DOCKER_TLS_CERTDIR
       value: ""
     args:
-    - --insecure-registry=192.168.142.1:5000
+    - --insecure-registry=192.168.142.101:30500
 '''
     }
   }
@@ -35,7 +35,7 @@ spec:
   }
 
   environment {
-    REGISTRY = '192.168.142.1:5000'
+    REGISTRY = '192.168.142.101:30500'
     IMAGE_NAME = 'jenkins-argo-demo'
     REPO = 'sonmap/K8S_Argo_Jenkins_test01'
   }
