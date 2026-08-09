@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jenkins + Argo CD Demo Portal</title>
+  <title>Jenkins + Argo CD Full Stack Demo</title>
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; font-family: Arial, "Noto Sans KR", sans-serif; background: #f4f7fb; color: #172033; }
@@ -13,49 +13,52 @@
     .hero { background: white; border: 1px solid #dbe4ef; border-radius: 18px; padding: 34px; }
     h1 { margin-top: 0; color: #326ce5; }
     .flow { margin: 24px 0; padding: 16px; border-radius: 10px; background: #eef4ff; font-family: monospace; line-height: 1.8; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 24px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-top: 24px; }
     .card { background: white; border: 1px solid #dbe4ef; border-radius: 16px; padding: 26px; }
     .card h2 { margin-top: 0; }
     .btn { display: inline-block; margin-top: 14px; padding: 11px 17px; border-radius: 9px; background: #326ce5; color: white; text-decoration: none; font-weight: 700; }
     .btn.dark { background: #111827; }
     .muted { color: #667085; }
+    .tag { display: inline-block; padding: 5px 9px; border-radius: 999px; background: #ecfdf3; color: #067647; font-size: 13px; font-weight: 700; }
     footer { max-width: 1100px; margin: 30px auto; padding: 0 20px; color: #667085; }
   </style>
 </head>
 <body>
   <header>
-    <div class="inner">
-      <strong>Jenkins + Argo CD GitOps Test</strong>
-    </div>
+    <div class="inner"><strong>Jenkins + Argo CD GitOps Test</strong></div>
   </header>
 
   <main>
     <section class="hero">
-      <h1>Kubernetes CI/CD Demo Portal</h1>
-      <p>GitHub 소스를 Jenkins가 Docker Image로 빌드하고, Registry에 Push한 뒤 Argo CD가 GitOps 방식으로 Kubernetes에 배포하는 실습 화면입니다.</p>
-      <div class="flow">GitHub → Jenkins → Docker Build → Local Registry → GitOps → Argo CD → Kubernetes</div>
-      <p class="muted">현재 Nginx 컨테이너 이미지에는 메인, Frontend, Backend/Admin 예제 HTML이 함께 포함됩니다.</p>
+      <span class="tag">FULL STACK DEMO</span>
+      <h1>Kubernetes Frontend + Backend + MySQL</h1>
+      <p>GitHub 소스를 Jenkins가 두 개의 Docker Image로 빌드하고, Argo CD가 Frontend / Backend / MySQL 리소스를 Kubernetes에 배포하는 실습입니다.</p>
+      <div class="flow">GitHub → Jenkins → Docker Build → Local Registry → GitOps → Argo CD → Kubernetes<br>Browser → Nginx Frontend → Spring Boot Backend → MySQL</div>
     </section>
 
     <section class="grid">
       <article class="card">
-        <h2>Frontend 사용자 화면</h2>
-        <p>실제 서비스 사용자가 보는 상품/업무 화면의 간단한 예제입니다.</p>
-        <p class="muted">Nginx가 HTML/CSS를 정적 콘텐츠로 서비스합니다.</p>
-        <a class="btn" href="/frontend.html">Frontend 열기</a>
+        <h2>1. Frontend</h2>
+        <p><strong>demo-web / Nginx</strong></p>
+        <p class="muted">HTML 화면과 고객 조회 UI를 제공하며 /api 요청을 Backend Service로 Proxy합니다.</p>
+        <a class="btn" href="/frontend.html">고객 조회 화면</a>
       </article>
 
       <article class="card">
-        <h2>Backend / Admin 화면</h2>
-        <p>Jenkins, Argo CD, Kubernetes, Registry 등의 상태를 표현하는 관리자 화면 예제입니다.</p>
-        <p class="muted">현재는 정적 Demo이며, 다음 단계에서 Java/Spring Boot REST API를 별도 Pod로 연결할 수 있습니다.</p>
-        <a class="btn dark" href="/backend.html">Backend/Admin 열기</a>
+        <h2>2. Backend</h2>
+        <p><strong>demo-backend / Spring Boot</strong></p>
+        <p class="muted">REST API로 요청을 받고 JDBC를 사용해 MySQL의 customers 테이블을 조회합니다.</p>
+        <a class="btn dark" href="/backend.html">Backend 상태 화면</a>
+      </article>
+
+      <article class="card">
+        <h2>3. Database</h2>
+        <p><strong>demo-mysql / MySQL 8.4</strong></p>
+        <p class="muted">샘플 고객 5건을 초기 데이터로 생성하고 Backend에서 ClusterIP로 접근합니다.</p>
       </article>
     </section>
   </main>
 
-  <footer>
-    Container source: app/ &nbsp;|&nbsp; Deployment: cicd-demo/demo-web
-  </footer>
+  <footer>CI: Jenkins &nbsp;|&nbsp; CD: Argo CD &nbsp;|&nbsp; Namespace: cicd-demo</footer>
 </body>
 </html>
