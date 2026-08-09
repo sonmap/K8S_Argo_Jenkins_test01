@@ -8,6 +8,8 @@ metadata:
   labels:
     app: jenkins-agent-docker
 spec:
+  securityContext:
+    runAsUser: 0
   containers:
   - name: docker
     image: docker:cli
