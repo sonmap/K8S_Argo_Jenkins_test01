@@ -9,5 +9,5 @@ resources:
 
 images:
   - name: jenkins-argo-demo
-    newName: nginx
-    newTag: 1.29-alpine
+    newName: 192.168.142.101:30500/jenkins-argo-demo
+    newTag: b10
